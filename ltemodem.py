@@ -30,15 +30,20 @@
 #              0008     - Add enable OS raw IP mode setting (not persistent) inside 4G LTE modem initialization
 #                         sequence.
 #              0009     - Add necessary commenting.
+#              0010     - Improve a script logics on the QUECTOPT 4G LTE modem start and restart network process.
+#              0011     - Improve a script logics on the QUECTOPT 4G LTE modem error handling on each start and
+#                         restart modem process.
 #
 #              ----------------------------------------------------------------------------------------------
 # Author : Ahmad Bahari Nizam B. Abu Bakar.
 #
 # Version: 1.0.1
 # Version: 1.0.2 - Add feature item [0008,0009]
+# Version: 1.0.3 - Add feature item [0010,0011]
 #
 # Date   : 06/02/2020 (INITIAL RELEASE DATE)
 #          UPDATED - 08/07/2022 - 1.0.2
+#          UPDATED - 22/09/2022 - 1.0.3
 #
 #############################################################################################################
 
@@ -218,10 +223,10 @@ def main():
                         if 'Network started successfully' in stdout:
                             # Write to logger
                             if backLogger == True:
-                                logger.info("DEBUG_4G: START 4G modem (qmi-network) SUCCESSFUL")
+                                logger.info("DEBUG_4G: PROC-START-BOOT[01]-START 4G modem (qmi-network) SUCCESSFUL")
                             # Print statement
                             else:
-                                print "DEBUG_4G: START 4G modem (qmi-network) SUCCESSFUL"
+                                print "DEBUG_4G: PROC-START-BOOT[01]-START 4G modem (qmi-network) SUCCESSFUL"
 
                             # Wait before execute another command
                             time.sleep(1)
@@ -236,10 +241,10 @@ def main():
                             if stderr == None:
                                 # Write to logger
                                 if backLogger == True:
-                                    logger.info("DEBUG_4G: Bringing UP interface wwan0 SUCCESSFUL")
+                                    logger.info("DEBUG_4G: PROC-START-BOOT[02]-Bringing UP interface wwan0 SUCCESSFUL")
                                 # Print statement
                                 else:
-                                    print "DEBUG_4G: Bringing UP interface wwan0 SUCCESSFUL"
+                                    print "DEBUG_4G: PROC-START-BOOT[02]-Bringing UP interface wwan0 SUCCESSFUL"
 
                                 # Wait before execute another command
                                 time.sleep(1)
@@ -263,28 +268,143 @@ def main():
                                         
                                         # Write to logger
                                         if backLogger == True:
-                                            logger.info("DEBUG_4G: Obtained public IP address SUCCESSFUL")
+                                            logger.info("DEBUG_4G: PROC-START-BOOT[03]-Obtained public IP address SUCCESSFUL")
                                         # Print statement
                                         else:
-                                            print "DEBUG_4G: Obtained public IP address SUCCESSFUL"
-                    
+                                            print "DEBUG_4G: PROC-START-BOOT[03]-Obtained public IP address SUCCESSFUL"
+
+                                # Error during command execution
+                                else:
+                                    # Write to logger
+                                    if backLogger == True:
+                                        logger.info("DEBUG_4G: PROC-START-BOOT[03]-Obtained public IP address FAILED!, restart LTE network initiation process...")
+                                    # Print statement
+                                    else:
+                                        print "DEBUG_4G: PROC-START-BOOT[03]-Obtained public IP address FAILED!, restart LTE network initiation process..."
+
+                                    # Wait before execute another command
+                                    time.sleep(1)
+
+                                    # Start shutdown wwan0 interface
+                                    out = subprocess.Popen(['ifconfig', 'wwan0', 'down'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                    stdout,stderr = out.communicate()
+
+                                    # NO error after command execution
+                                    if stderr == None:
+                                        # Write to logger
+                                        if backLogger == True:
+                                            logger.info("DEBUG_4G: PROC-END-BOOT[01]-Bringing DOWN interface wwan0 SUCCESSFULL")
+                                        # Print statement
+                                        else:
+                                            print "DEBUG_4G: PROC-END-BOOT[01]-Bringing DOWN interface wwan0 SUCCESSFULL"
+                                        
+                                        # Wait before execute another command
+                                        time.sleep(1)
+                                    
+                                        # Shutdown qmi network
+                                        out = subprocess.Popen(['qmi-network', '/dev/cdc-wdm0', 'stop'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                        stdout,stderr = out.communicate()
+
+                                        # NO error after command execution
+                                        if stderr == None:
+                                            # Network successfully stop
+                                            if 'Network stopped successfully' in stdout:
+                                                # Write to logger
+                                                if backLogger == True:
+                                                    logger.info("DEBUG_4G: PROC-END-BOOT[02]-STOP 4G modem (qmi-network) SUCCESSFULL")
+                                                # Print statement
+                                                else:
+                                                    print "DEBUG_4G: PROC-END-BOOT[02]-STOP 4G modem (qmi-network) SUCCESSFULL"
+
+                                            # Network failed to stop
+                                            else:
+                                                # Write to logger
+                                                if backLogger == True:
+                                                    logger.info("DEBUG_4G: PROC-END-BOOT[02]-STOP 4G modem (qmi-network) FAILED!")
+                                                # Print statement
+                                                else:
+                                                    print "DEBUG_4G: PROC-END-BOOT[02]-STOP 4G modem (qmi-network) FAILED!"
+
+                                        # Error during command execution
+                                        else:
+                                            # Write to logger
+                                            if backLogger == True:
+                                                logger.info("DEBUG_4G: PROC-END-BOOT[01]-STOP 4G modem (qmi-network), execution ERROR")
+                                            # Print statement
+                                            else:
+                                                print "DEBUG_4G: PROC-END-BOOT[01]-STOP 4G modem (qmi-network), execution ERROR"
+
+                                    # Command execution error
+                                    else:
+                                        # Write to logger
+                                        if backLogger == True:
+                                            logger.info("DEBUG_4G: PROC-END-BOOT[01]-Bringing DOWN interface wwan0 FAILED!, execution ERROR")
+                                        # Print statement
+                                        else:
+                                            print "DEBUG_4G: PROC-END-BOOT[01]-Bringing DOWN interface wwan0 FAILED!, execution ERROR"
+                                        
+                            # Error during command execution - out = subprocess.Popen(['ifconfig', 'wwan0', 'up'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                            else:
+                                # Write to logger
+                                if backLogger == True:
+                                    logger.info("DEBUG_4G: PROC-START-BOOT[02]-Bringing UP interface wwan0 FAILED!, restart LTE network initiation process...")
+                                # Print statement
+                                else:
+                                    print "DEBUG_4G: PROC-START-BOOT[02]-Bringing UP interface wwan0 FAILED!, restart LTE network initiation process..."
+
+                                # Wait before execute another command
+                                time.sleep(1)
+
+                                # Shutdown qmi network
+                                out = subprocess.Popen(['qmi-network', '/dev/cdc-wdm0', 'stop'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                stdout,stderr = out.communicate()
+
+                                # NO error after command execution
+                                if stderr == None:
+                                    # Network successfully stop
+                                    if 'Network stopped successfully' in stdout:
+                                        # Write to logger
+                                        if backLogger == True:
+                                            logger.info("DEBUG_4G: PROC-END-BOOT[01]-STOP 4G modem (qmi-network) SUCCESSFULL")
+                                        # Print statement
+                                        else:
+                                            print "DEBUG_4G: PROC-END-BOOT[01]-STOP 4G modem (qmi-network) SUCCESSFULL"
+
+                                    # Network failed to stop
+                                    else:
+                                        # Write to logger
+                                        if backLogger == True:
+                                            logger.info("DEBUG_4G: PROC-END-BOOT[01]-STOP 4G modem (qmi-network) FAILED!")
+                                        # Print statement
+                                        else:
+                                            print "DEBUG_4G: PROC-END-BOOT[01]-STOP 4G modem (qmi-network) FAILED!"
+                                        
+                                # Error during command execution
+                                else:
+                                    # Write to logger
+                                    if backLogger == True:
+                                        logger.info("DEBUG_4G: PROC-END-BOOT[01]-STOP 4G modem (qmi-network), execution ERROR")
+                                    # Print statement
+                                    else:
+                                        print "DEBUG_4G: PROC-END-BOOT[01]-STOP 4G modem (qmi-network), execution ERROR"
+                                    
                         # Network failed to start
                         else:
                             # Write to logger
                             if backLogger == True:
-                                logger.info("DEBUG_4G: START 4G modem (qmi-network) FAILED!, retry on the next cycle...")
+                                logger.info("DEBUG_4G: PROC-START-BOOT[01]-START 4G modem (qmi-network) FAILED!, retry on the next cycle...")
                             # Print statement
                             else:
-                                print "DEBUG_4G: START 4G modem (qmi-network) FAILED!, retry on the next cycle..."       
+                                print "DEBUG_4G: PROC-START-BOOT[01]-START 4G modem (qmi-network) FAILED!, retry on the next cycle..."       
 
                     # Error during command execution
                     else:
                         # Write to logger
                         if backLogger == True:
-                            logger.info("DEBUG_4G: START 4G modem (qmi-network) FAILED!, retry on the next cycle...")
+                            logger.info("DEBUG_4G: PROC-START-BOOT[01]-START 4G modem (qmi-network) FAILED!, retry on the next cycle...")
                         # Print statement
                         else:
-                            print "DEBUG_4G: START 4G modem (qmi-network) FAILED!, retry on the next cycle..."
+                            print "DEBUG_4G: PROC-START-BOOT[01]-START 4G modem (qmi-network) FAILED!, retry on the next cycle..."
                         
                 # Using qmicli method
                 else:
@@ -506,8 +626,8 @@ def main():
                             # Increment attempt to check 4G network by pinging process
                             pingAttempt += 1
 
-                            # After  checking 5 times, still 4G network failed, start initiate 4G LTE modem:
-                            if pingAttempt == 5:
+                            # After  checking 10 times, still 4G network failed, start initiate 4G LTE modem:
+                            if pingAttempt == 10:
                                 pingAttempt = 0
 
                                 # Write to logger
@@ -522,70 +642,70 @@ def main():
 
                                 # Using qmi-network CLI
                                 if quectelOpt == True:
-                                    # STOP the 4G modem
-                                    #out = subprocess.Popen(['qmi-network', '/dev/cdc-wdm1', 'stop'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                                    out = subprocess.Popen(['qmi-network', '/dev/cdc-wdm0', 'stop'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                    # Disable wwan0 interface
+                                    # Command: ifconfig wwan0 down
+                                    # Reply: NA 
+                                    out = subprocess.Popen(['ifconfig', 'wwan0', 'down'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                                     stdout,stderr = out.communicate()
-                                    
+
                                     # NO error after command execution
                                     if stderr == None:
-                                        # Network successfully started
-                                        if 'Network stopped successfully' in stdout:
-                                            # Write to logger
-                                            if backLogger == True:
-                                                logger.info("DEBUG_4G: STOP 4G modem (qmi-network) SUCCESSFUL")
-                                            # Print statement
-                                            else:
-                                                print "DEBUG_4G: STOP 4G modem (qmi-network) SUCCESSFUL"
+                                        # Write to logger
+                                        if backLogger == True:
+                                            logger.info("DEBUG_4G: PROC-END-NORM[01]-Bringing DOWN interface wwan0 SUCCESSFUL")
+                                        # Print statement
+                                        else:
+                                            print "DEBUG_4G: PROC-END-NORM[01]-Bringing DOWN interface wwan0 SUCCESSFUL"
 
-                                            # Wait before execute another command
-                                            time.sleep(1)
+                                        # Wait before execute another command
+                                        time.sleep(1)
 
-                                            # Disable wwan0 interface
-                                            # Command: ifconfig wwan0 down
-                                            # Reply: NA 
-                                            out = subprocess.Popen(['ifconfig', 'wwan0', 'down'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                                            stdout,stderr = out.communicate() 
-                                            
-                                            # NO error after command execution
-                                            if stderr == None:
+                                        # STOP the 4G modem
+                                        #out = subprocess.Popen(['qmi-network', '/dev/cdc-wdm1', 'stop'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                        out = subprocess.Popen(['qmi-network', '/dev/cdc-wdm0', 'stop'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                        stdout,stderr = out.communicate()
+
+                                        # NO error after command execution
+                                        if stderr == None:
+                                            # Network successfully started
+                                            if 'Network stopped successfully' in stdout:
                                                 # Write to logger
                                                 if backLogger == True:
-                                                    logger.info("DEBUG_4G: Bringing DOWN interface wwan0 SUCCESSFUL")
+                                                    logger.info("DEBUG_4G: PROC-END-NORM[02]-STOP 4G modem (qmi-network) SUCCESSFUL")
                                                 # Print statement
                                                 else:
-                                                    print "DEBUG_4G: Bringing DOWN interface wwan0 SUCCESSFUL"
-                                            
-						# Set flag to restart 4G LTE modem on the next cycle
-						restart4gModem = True
-												
-						# Error during command executiom
-					    else:
-						# Write to logger
-                                                if backLogger == True:
-                                                    logger.info("DEBUG_4G: Bringing DOWN interface wwan0 FAILED!")
-                                                # Print statement
-                                                else:
-                                                    print "DEBUG_4G: Bringing DOWN interface wwan0 FAILED!"
+                                                    print "DEBUG_4G: PROC-END-NORM[02]-STOP 4G modem (qmi-network) SUCCESSFUL"
 
-                                        # Network failed to start
+                                                # Set flag to restart 4G LTE modem on the next cycle
+                                                restart4gModem = True
+
+                                            # Network failed to stop
+                                            else:
+                                                # Write to logger
+                                                if backLogger == True:
+                                                    logger.info("DEBUG_4G: PROC-END-NORM[02]-STOP 4G modem (qmi-network) FAILED!, retry on the next cycle...")
+                                                # Print statement
+                                                else:
+                                                    print "DEBUG_4G: PROC-END-NORM[02]-STOP 4G modem (qmi-network) FAILED!, retry on the next cycle..."
+
+                                        # Error during command executiom
                                         else:
                                             # Write to logger
                                             if backLogger == True:
-                                                logger.info("DEBUG_4G: STOP 4G modem (qmi-network) FAILED!, retry on the next cycle...")
+                                                logger.info("DEBUG_4G: PROC-END-NORM[02]-STOP 4G modem (qmi-network) FAILED!, retry on the next cycle...")
                                             # Print statement
                                             else:
-                                                print "DEBUG_4G: STOP 4G modem (qmi-network) FAILED!, retry on the next cycle..."
-
+                                                print "DEBUG_4G: PROC-END-NORM[02]-STOP 4G modem (qmi-network) FAILED!, retry on the next cycle..."
+                                        
                                     # Error during command executiom
                                     else:
                                         # Write to logger
                                         if backLogger == True:
-                                            logger.info("DEBUG_4G: STOP 4G modem (qmi-network) FAILED!, retry on the next cycle...")
+                                            logger.info("DEBUG_4G: PROC-END-NORM[01]-Bringing DOWN interface wwan0 FAILED!, execution error")
                                         # Print statement
                                         else:
-                                            print "DEBUG_4G: STOP 4G modem (qmi-network) FAILED!, retry on the next cycle..."
-                                                    
+                                            print "DEBUG_4G: PROC-END-NORM[01]-Bringing DOWN interface wwan0 FAILED!, execution error"
+
                                 # Using qmicli method
                                 else:
                                     # Set qmicli tmeout flag for checking purposes
@@ -679,10 +799,10 @@ def main():
                             if 'Network started successfully' in stdout:
                                 # Write to logger
                                 if backLogger == True:
-                                    logger.info("DEBUG_4G: START 4G modem (qmi-network) SUCCESSFUL")
+                                    logger.info("DEBUG_4G: PROC-START-RSTRT[01]-START 4G modem (qmi-network) SUCCESSFUL")
                                 # Print statement
                                 else:
-                                    print "DEBUG_4G: START 4G modem (qmi-network) SUCCESSFUL"
+                                    print "DEBUG_4G: PROC-START-RSTRT[01]-START 4G modem (qmi-network) SUCCESSFUL"
 
                                 # Wait before execute another command
                                 time.sleep(1)
@@ -697,10 +817,10 @@ def main():
                                 if stderr == None:
                                     # Write to logger
                                     if backLogger == True:
-                                        logger.info("DEBUG_4G: Bringing UP interface wwan0 SUCCESSFUL")
+                                        logger.info("DEBUG_4G: PROC-START-RSTRT[02]-Bringing UP interface wwan0 SUCCESSFUL")
                                     # Print statement
                                     else:
-                                        print "DEBUG_4G: Bringing UP interface wwan0 SUCCESSFUL"
+                                        print "DEBUG_4G: PROC-START-RSTRT[02]-Bringing UP interface wwan0 SUCCESSFUL"
 
                                     # Wait before execute another command
                                     time.sleep(1)
@@ -719,37 +839,149 @@ def main():
                                         publicIpAddr += ' obtained'
                                         # 4G LTE modem initialization with network provider completed
                                         if publicIpAddr in stdout:
-                                            # Clear flag to restart 4G LTE modem on the next cycle
+                                            # Clear flag to start pinging process
                                             restart4gModem = False
                                             
                                             # Write to logger
                                             if backLogger == True:
-                                                logger.info("DEBUG_4G: Obtained public IP address SUCCESSFUL")
+                                                logger.info("DEBUG_4G: PROC-START-RSTRT[03]-Obtained public IP address SUCCESSFUL")
                                             # Print statement
                                             else:
-                                                print "DEBUG_4G: Obtained public IP address SUCCESSFUL"
-                        
+                                                print "DEBUG_4G: PROC-START-RSTRT[03]-Obtained public IP address SUCCESSFUL"
+
+                                    # Error during command execution
+                                    else:
+                                        # Write to logger
+                                        if backLogger == True:
+                                            logger.info("DEBUG_4G: PROC-START-RSTRT[03]-Obtained public IP address FAILED!, restart LTE network initiation process...")
+                                        # Print statement
+                                        else:
+                                            print "DEBUG_4G: PROC-START-RSTRT[03]-Obtained public IP address FAILED!, restart LTE network initiation process..."
+
+                                        # Wait before execute another command
+                                        time.sleep(1)
+
+                                        # Start shutdown wwan0 interface
+                                        out = subprocess.Popen(['ifconfig', 'wwan0', 'down'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                        stdout,stderr = out.communicate()
+
+                                         # NO error after command execution
+                                        if stderr == None:
+                                            # Write to logger
+                                            if backLogger == True:
+                                                logger.info("DEBUG_4G: PROC-END-RSTRT[01]-Bringing DOWN interface wwan0 SUCCESSFULL")
+                                            # Print statement
+                                            else:
+                                                print "DEBUG_4G: PROC-END-RSTRT[01]-Bringing DOWN interface wwan0 SUCCESSFULL"
+
+                                            # Wait before execute another command
+                                            time.sleep(1)
+                                        
+                                            # Shutdown qmi network
+                                            out = subprocess.Popen(['qmi-network', '/dev/cdc-wdm0', 'stop'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                            stdout,stderr = out.communicate()
+
+                                            # NO error after command execution
+                                            if stderr == None:
+                                                # Network successfully stop
+                                                if 'Network stopped successfully' in stdout:
+                                                    # Write to logger
+                                                    if backLogger == True:
+                                                        logger.info("DEBUG_4G: PROC-END-RSTRT[02]-STOP 4G modem (qmi-network) SUCCESSFULL")
+                                                    # Print statement
+                                                    else:
+                                                        print "DEBUG_4G: PROC-END-RSTRT[02]-STOP 4G modem (qmi-network) SUCCESSFULL"
+
+                                                # Network failed to stop
+                                                else:
+                                                    # Write to logger
+                                                    if backLogger == True:
+                                                        logger.info("DEBUG_4G: PROC-END-RSTRT[02]-STOP 4G modem (qmi-network) FAILED!")
+                                                    # Print statement
+                                                    else:
+                                                        print "DEBUG_4G: PROC-END-RSTRT[02]-STOP 4G modem (qmi-network) FAILED!"
+
+                                            # Error during command execution
+                                            else:
+                                                # Write to logger
+                                                if backLogger == True:
+                                                    logger.info("DEBUG_4G: PROC-END-RSTRT[02]-STOP 4G modem (qmi-network), execution ERROR")
+                                                # Print statement
+                                                else:
+                                                    print "DEBUG_4G: PROC-END-RSTRT[02]-STOP 4G modem (qmi-network), execution ERROR"
+                                                
+
+                                        # Error during command execution
+                                        else:
+                                            # Write to logger
+                                            if backLogger == True:
+                                                logger.info("DEBUG_4G: PROC-END-RSTRT[01]-Bringing DOWN interface wwan0 FAILED!, execution ERROR")
+                                            # Print statement
+                                            else:
+                                                print "DEBUG_4G: PROC-END-RSTRT[01]-Bringing DOWN interface wwan0 FAILED!, execution ERROR"    
+
+                                # Error during command execution - out = subprocess.Popen(['ifconfig', 'wwan0', 'up'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                else:
+                                    # Write to logger
+                                    if backLogger == True:
+                                        logger.info("DEBUG_4G: PROC-START-RSTRT[02]-Bringing UP interface wwan0 FAILED!, restart LTE network initiation process...")
+                                    # Print statement
+                                    else:
+                                        print "DEBUG_4G: PROC-START-RSTRT[02]-Bringing UP interface wwan0 FAILED!, restart LTE network initiation process..."
+
+                                    # Wait before execute another command
+                                    time.sleep(1)
+
+                                    # Shutdown qmi network
+                                    out = subprocess.Popen(['qmi-network', '/dev/cdc-wdm0', 'stop'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                    stdout,stderr = out.communicate()
+
+                                    # NO error after command execution
+                                    if stderr == None:
+                                        # Network successfully stop
+                                        if 'Network stopped successfully' in stdout:
+                                            # Write to logger
+                                            if backLogger == True:
+                                                logger.info("DEBUG_4G: PROC-END-RSTRT[01]-STOP 4G modem (qmi-network) SUCCESSFULL")
+                                            # Print statement
+                                            else:
+                                                print "DEBUG_4G: PROC-END-RSTRT[01]-STOP 4G modem (qmi-network) SUCCESSFULL"
+
+                                        # Network failed to stop
+                                        else:
+                                            # Write to logger
+                                            if backLogger == True:
+                                                logger.info("DEBUG_4G: PROC-END-RSTRT[01]-STOP 4G modem (qmi-network) FAILED!")
+                                            # Print statement
+                                            else:
+                                                print "DEBUG_4G: PROC-END-RSTRT[01]-STOP 4G modem (qmi-network) FAILED!"
+
+                                    # Error during command execution
+                                    else:
+                                        # Write to logger
+                                        if backLogger == True:
+                                            logger.info("DEBUG_4G: PROC-END-RSTRT[01]-STOP 4G modem (qmi-network), execution ERROR")
+                                        # Print statement
+                                        else:
+                                            print "DEBUG_4G: PROC-END-RSTRT[01]-STOP 4G modem (qmi-network), execution ERROR"
+                                        
                             # Network failed to start
                             else:
                                 # Write to logger
                                 if backLogger == True:
-                                    logger.info("DEBUG_4G: START 4G modem (qmi-network) FAILED!, retry on the next cycle...")
+                                    logger.info("DEBUG_4G: PROC-START-RSTRT[01]-START 4G modem (qmi-network) FAILED!, retry on the next cycle...")
                                 # Print statement
                                 else:
-                                    print "DEBUG_4G: START 4G modem (qmi-network) FAILED!, retry on the next cycle..."    
-
-                                # Retry checking the network connectivity
+                                    print "DEBUG_4G: PROC-START-RSTRT[01]-START 4G modem (qmi-network) FAILED!, retry on the next cycle..."    
 
                         # Error during command executiom
                         else:
                             # Write to logger
                             if backLogger == True:
-                                logger.info("DEBUG_4G: START 4G modem (qmi-network) FAILED!, retry on the next cycle...")
+                                logger.info("DEBUG_4G: PROC-START-RSTRT[01]-START 4G modem (qmi-network) FAILED!, retry on the next cycle...")
                             # Print statement
                             else:
-                                print "DEBUG_4G: START 4G modem (qmi-network) FAILED!, retry on the next cycle..."
-                                
-                            # Retry checking the network connectivity
+                                print "DEBUG_4G: PROC-START-RSTRT[01]-START 4G modem (qmi-network) FAILED!, retry on the next cycle..."
                                 
                     # Using qmicli method
                     else:
